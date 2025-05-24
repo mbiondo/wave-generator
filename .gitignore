@@ -33,3 +33,7 @@ Thumbs.db
 
 # Test cache
 /tmp/
+
+# Go build cache and module cache
+/pkg/
+bin/
