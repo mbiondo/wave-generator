@@ -16,7 +16,7 @@ func TestIndexHandler(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create test directories: %v", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	// Create test index.html in static directory
 	indexPath := filepath.Join(staticDir, "index.html")
@@ -30,7 +30,7 @@ func TestIndexHandler(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to get working directory: %v", err)
 	}
-	defer os.Chdir(originalWd)
+	defer func() { _ = os.Chdir(originalWd) }()
 
 	if err := os.Chdir(tmpDir); err != nil {
 		t.Fatalf("failed to change working directory: %v", err)

@@ -102,7 +102,7 @@ func TestFitSegments(t *testing.T) {
 			sky:      []float64{2, 2, 2, 2, 2, 2, 2, 2}, // Constant function causes singular matrix
 			width:    8,
 			wantSegs: 0,
-			wantErr:  true,
+			wantErr:  false, // no panic expected now, segment is skipped
 		},
 	}
 
@@ -122,12 +122,14 @@ func TestFitSegments(t *testing.T) {
 			segments := FitSegments(tt.sky, tt.width)
 
 			if !tt.wantErr {
-				if len(segments) == 0 {
-					t.Fatalf("expected non-empty segments, got %d", len(segments))
-				}
-
 				if len(segments) != tt.wantSegs {
 					t.Errorf("expected %d segments, got %d", tt.wantSegs, len(segments))
+				}
+				if len(segments) == 0 && tt.wantSegs == 0 {
+					return // allow empty segments if that's expected
+				}
+				if len(segments) == 0 {
+					t.Fatalf("expected non-empty segments, got %d", len(segments))
 				}
 
 				// Verify segments are contiguous

@@ -49,15 +49,7 @@ func BlogPostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write(page)
-}
-
-func renderMarkdown(md []byte) ([]byte, error) {
-	var buf bytes.Buffer
-	if err := goldmark.Convert(md, &buf); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
+	_, _ = w.Write(page)
 }
 
 func APIDocsHandler(w http.ResponseWriter, r *http.Request) {
@@ -78,5 +70,5 @@ func APIDocsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write(page)
+	_, _ = w.Write(page)
 }

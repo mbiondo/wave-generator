@@ -61,13 +61,17 @@ func TestMain(t *testing.T) {
 
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				origPort := os.Getenv("PORT")
 				if tt.port != "" {
-					os.Setenv("PORT", tt.port)
+					if err := os.Setenv("PORT", tt.port); err != nil {
+						t.Fatalf("Setenv failed: %v", err)
+					}
 				} else {
-					os.Unsetenv("PORT")
+					if err := os.Unsetenv("PORT"); err != nil {
+						t.Fatalf("Unsetenv failed: %v", err)
+					}
 				}
-				defer os.Setenv("PORT", origPort)
+				origPort := os.Getenv("PORT")
+				defer func() { _ = os.Setenv("PORT", origPort) }()
 
 				mux := http.NewServeMux()
 				err := setupHandlers(mux)
@@ -91,7 +95,9 @@ func TestMain(t *testing.T) {
 				// Shutdown server
 				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 				defer cancel()
-				server.Shutdown(ctx)
+				if err := server.Shutdown(ctx); err != nil {
+					t.Logf("server shutdown: %v", err)
+				}
 
 				err = <-serverErr
 				// Accept http.ErrServerClosed as a normal shutdown (not a test failure)

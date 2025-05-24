@@ -2,7 +2,6 @@ package services
 
 import (
 	"fmt"
-	"math"
 
 	"wave-generator/models"
 
@@ -85,22 +84,21 @@ func FitSegments(pattern []float64, width int) []models.PolySegment {
 		X := mat.NewDense(m, 4, nil)
 		Y := mat.NewVecDense(m, nil)
 		allSame := true
-		firstVal := pattern[x0]
-
+		firstY := pattern[x0]
 		for j := 0; j < m; j++ {
-			if pattern[x0+j] != firstVal {
-				allSame = false
-			}
 			xVal := float64(x0 + j)
-			X.Set(j, 0, math.Pow(xVal, 3))
-			X.Set(j, 1, math.Pow(xVal, 2))
+			X.Set(j, 0, xVal*xVal*xVal) // math.Pow(xVal, 3)
+			X.Set(j, 1, xVal*xVal)      // math.Pow(xVal, 2)
 			X.Set(j, 2, xVal)
 			X.Set(j, 3, 1)
 			Y.SetVec(j, pattern[x0+j])
+			if pattern[x0+j] != firstY {
+				allSame = false
+			}
 		}
 
 		if allSame {
-			panic("singular matrix: all y-values are identical")
+			continue // skip this segment, don't panic
 		}
 
 		var qr mat.QR

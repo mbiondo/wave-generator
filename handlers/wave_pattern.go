@@ -31,7 +31,9 @@ func GenerateAPIKeyHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	key := "api_" + fmt.Sprintf("%d", time.Now().UnixNano())
 	redisClient.Set(context.Background(), "apikey:"+key, "1", 0)
-	json.NewEncoder(w).Encode(map[string]string{"api_key": key})
+	if err := json.NewEncoder(w).Encode(map[string]string{"api_key": key}); err != nil {
+		http.Error(w, "encoding error", http.StatusInternalServerError)
+	}
 }
 
 // WavePatternHandler processes HTTP requests to extract wave patterns from an image.
@@ -116,16 +118,24 @@ func WavePatternHandler(w http.ResponseWriter, r *http.Request) {
 		// Convert the image to grayscale and extract the pattern
 		gray := services.ToGray(img)
 		pattern := services.ExtractPattern(gray, wImg, hImg)
+		defer func() {
+			if rec := recover(); rec != nil {
+				err = fmt.Errorf("processing error: %v", rec)
+				segments = nil
+				svg = ""
+			}
+		}()
 		segments = services.FitSegments(pattern, wImg)
+		if len(segments) == 0 {
+			err = fmt.Errorf("could not fit any polynomial segments (possibly singular matrix)")
+			return
+		}
 		svg = services.BuildSVG(wImg, hImg, segments)
 
 		// Generate SVG for each segment (mini SVG, width = segment length, height = 40, Y scaled to segment range)
 		const miniHeight = 40
 		for i := range segments {
 			seg := segments[i]
-			miniSeg := seg
-			miniSeg.X0 = seg.X0
-			miniSeg.X1 = seg.X1
 			width := seg.X1 - seg.X0 + 1
 			if width < 2 {
 				segments[i].SVG = ""
@@ -164,16 +174,20 @@ func WavePatternHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(struct {
+	if err := json.NewEncoder(w).Encode(struct {
 		models.ResponsePayload
-		SegmentSVGs []string `json:"segment_svgs"`
+		SegmentSVGs []string    `json:"segment_svgs"`
+		Coords      [][]float64 `json:"coords"`
 	}{
 		ResponsePayload: models.ResponsePayload{
 			Segments: segments,
 			SVG:      svg,
 		},
 		SegmentSVGs: segmentSVGs,
-	})
+		Coords:      coords,
+	}); err != nil {
+		http.Error(w, "encoding error", http.StatusInternalServerError)
+	}
 }
 
 func getenv(key, fallback string) string {

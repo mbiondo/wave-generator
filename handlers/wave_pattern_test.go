@@ -96,7 +96,11 @@ func TestWavePatternHandler(t *testing.T) {
 	t.Run("singular matrix case", func(t *testing.T) {
 		uniformImg := image.NewGray(image.Rect(0, 0, 8, 8))
 		var buf bytes.Buffer
-		png.Encode(&buf, uniformImg)
+		// Save test image
+		err := png.Encode(&buf, uniformImg)
+		if err != nil {
+			t.Fatalf("png.Encode failed: %v", err)
+		}
 
 		req := httptest.NewRequest(http.MethodPost, "/generate-wave", &buf)
 		req.Header.Set("Content-Type", "image/png")

@@ -26,10 +26,10 @@ func TestBlogPostHandler_OK(t *testing.T) {
 	tmpPath := "blog/wave-generator-math-tutorial.md"
 	createTempMarkdown(t, tmpPath, "# Hello\nThis is a test blog.")
 	defer func() {
-		os.Remove(tmpPath)
-		os.Remove("static/page_template.html") // Clean up template after test
-		os.Remove("static")                    // Clean up static directory
-		os.Remove("blog")                      // Clean up blog directory
+		_ = os.Remove(tmpPath)
+		_ = os.Remove("static/page_template.html")
+		_ = os.Remove("static")
+		_ = os.Remove("blog")
 	}()
 
 	// Ensure template exists for the test
@@ -45,14 +45,14 @@ func TestBlogPostHandler_OK(t *testing.T) {
 	if err := os.WriteFile(templatePath, []byte(templateContent), 0644); err != nil {
 		t.Fatalf("write template failed: %v", err)
 	}
-	defer os.Remove(templatePath)
+	defer func() { _ = os.Remove(templatePath) }()
 
 	req := httptest.NewRequest("GET", "/blog/wave-generator-math-tutorial", nil)
 	w := httptest.NewRecorder()
 	BlogPostHandler(w, req)
 
 	resp := w.Result()
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
 	}
@@ -67,14 +67,14 @@ func TestBlogPostHandler_OK(t *testing.T) {
 
 func TestBlogPostHandler_NotFound(t *testing.T) {
 	tmpPath := "blog/wave-generator-math-tutorial.md"
-	os.Remove(tmpPath) // ensure file does not exist
+	_ = os.Remove(tmpPath) // ensure file does not exist
 
 	req := httptest.NewRequest("GET", "/blog/wave-generator-math-tutorial", nil)
 	w := httptest.NewRecorder()
 	BlogPostHandler(w, req)
 
 	resp := w.Result()
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d", resp.StatusCode)
 	}
@@ -84,10 +84,10 @@ func TestAPIDocsHandler_OK(t *testing.T) {
 	tmpPath := "docs/api-docs.md"
 	createTempMarkdown(t, tmpPath, "# API Docs\nThis is the API documentation.")
 	defer func() {
-		os.Remove(tmpPath)
-		os.Remove("static/page_template.html")
-		os.Remove("static")
-		os.Remove("docs")
+		_ = os.Remove(tmpPath)
+		_ = os.Remove("static/page_template.html")
+		_ = os.Remove("static")
+		_ = os.Remove("docs")
 	}()
 
 	// Ensure template exists for the test
@@ -103,14 +103,14 @@ func TestAPIDocsHandler_OK(t *testing.T) {
 	if err := os.WriteFile(templatePath, []byte(templateContent), 0644); err != nil {
 		t.Fatalf("write template failed: %v", err)
 	}
-	defer os.Remove(templatePath)
+	defer func() { _ = os.Remove(templatePath) }()
 
 	req := httptest.NewRequest("GET", "/docs/api-docs", nil)
 	w := httptest.NewRecorder()
 	APIDocsHandler(w, req)
 
 	resp := w.Result()
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
 	}
@@ -122,14 +122,14 @@ func TestAPIDocsHandler_OK(t *testing.T) {
 
 func TestAPIDocsHandler_NotFound(t *testing.T) {
 	tmpPath := "docs/api-docs.md"
-	os.Remove(tmpPath) // ensure file does not exist
+	_ = os.Remove(tmpPath) // ensure file does not exist
 
 	req := httptest.NewRequest("GET", "/docs/api-docs", nil)
 	w := httptest.NewRecorder()
 	APIDocsHandler(w, req)
 
 	resp := w.Result()
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d", resp.StatusCode)
 	}

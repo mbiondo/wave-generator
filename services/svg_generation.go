@@ -2,7 +2,6 @@ package services
 
 import (
 	"fmt"
-	"math"
 	"wave-generator/models"
 )
 
@@ -37,7 +36,8 @@ func BuildSVG(w, h int, segs []models.PolySegment) string {
 			}
 		}
 		xf := float64(x)
-		y := seg.CoefA3*math.Pow(xf, 3) + seg.CoefA2*math.Pow(xf, 2) + seg.CoefA1*xf + seg.CoefA0
+		// Expand math.Pow for linter
+		y := seg.CoefA3*xf*xf*xf + seg.CoefA2*xf*xf + seg.CoefA1*xf + seg.CoefA0
 		s += fmt.Sprintf("%d,%.2f ", x, y)
 	}
 	s += `"/></svg>`
