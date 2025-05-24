@@ -1,0 +1,58 @@
+name: Go CI
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
+
+jobs:
+    build-test:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Set up Go
+              uses: actions/setup-go@v5
+              with:
+                  go-version: "1.23"
+
+            - name: Install dependencies
+              run: go mod download
+
+            - name: Build
+              run: go build -v ./...
+
+            - name: Run tests
+              run: go test -v ./...
+
+            - name: Run lint
+              uses: golangci/golangci-lint-action@v4
+              with:
+                  version: v1.55.2
+
+            - name: Check go.mod/go.sum tidy
+              run: go mod tidy && git diff --exit-code go.mod go.sum
+
+            - name: Check formatting (gofmt)
+              run: |
+                  output=$(gofmt -l .)
+                  if [ -n "$output" ]; then
+                    echo "Files not formatted:"
+                    echo "$output"
+                    exit 1
+                  fi
+
+            - name: Upload test coverage
+              run: |
+                  go test -coverprofile=coverage.out ./...
+                  go tool cover -func=coverage.out
+              continue-on-error: true
+
+            - name: Upload coverage artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: coverage-report
+                  path: coverage.out

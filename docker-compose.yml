@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  wave-generator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "1155:1155"
+    environment:
+      - PORT=1155
