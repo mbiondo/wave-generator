@@ -7,9 +7,32 @@ import (
 	_ "image/jpeg"
 	_ "image/png"
 	"net/http"
+	"os"
+	"strings"
+	"time"
 	"wave-generator/models"
 	"wave-generator/services"
+
+	"github.com/redis/go-redis/v9"
+	"golang.org/x/net/context"
 )
+
+var (
+	redisAddr   = getenv("REDIS_ADDR", "localhost:6379")
+	redisClient = redis.NewClient(&redis.Options{Addr: redisAddr})
+	rateLimit   = 1000 // requests per hour per API key
+)
+
+// GenerateAPIKeyHandler generates a new API key (simple UUID, not secure for prod).
+func GenerateAPIKeyHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "POST only", http.StatusMethodNotAllowed)
+		return
+	}
+	key := "api_" + fmt.Sprintf("%d", time.Now().UnixNano())
+	redisClient.Set(context.Background(), "apikey:"+key, "1", 0)
+	json.NewEncoder(w).Encode(map[string]string{"api_key": key})
+}
 
 // WavePatternHandler processes HTTP requests to extract wave patterns from an image.
 // It accepts only POST requests with an image in the request body.
@@ -28,6 +51,42 @@ import (
 // - The request method is not POST (405 Method Not Allowed)
 // - The image cannot be decoded (400 Bad Request)
 func WavePatternHandler(w http.ResponseWriter, r *http.Request) {
+	// Allow same-origin requests without API key
+	origin := r.Header.Get("Origin")
+	host := r.Host
+	isSameOrigin := origin == "" || strings.Contains(origin, host)
+
+	var apiKey string
+	if !isSameOrigin {
+		apiKey = r.Header.Get("X-API-Key")
+		if apiKey == "" {
+			http.Error(w, "Missing X-API-Key header", http.StatusUnauthorized)
+			return
+		}
+		ctx := context.Background()
+		// Check if API key exists
+		exists, err := redisClient.Exists(ctx, "apikey:"+apiKey).Result()
+		if err != nil || exists == 0 {
+			http.Error(w, "Invalid API key", http.StatusUnauthorized)
+			return
+		}
+		// Rate limit per API key
+		rlKey := "ratelimit:" + apiKey
+		count, err := redisClient.Incr(ctx, rlKey).Result()
+		if err != nil {
+			http.Error(w, "Rate limit error", http.StatusInternalServerError)
+			return
+		}
+		if count == 1 {
+			redisClient.Expire(ctx, rlKey, time.Hour)
+		}
+		if count > int64(rateLimit) {
+			ttl, _ := redisClient.TTL(ctx, rlKey).Result()
+			http.Error(w, "Rate limit exceeded. Try again in "+ttl.String(), http.StatusTooManyRequests)
+			return
+		}
+	}
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "Use POST with image in body", http.StatusMethodNotAllowed)
 		return
@@ -42,6 +101,7 @@ func WavePatternHandler(w http.ResponseWriter, r *http.Request) {
 	var segments []models.PolySegment
 	var svg string
 	var segmentSVGs []string
+	var coords [][]float64
 
 	func() {
 		defer func() {
@@ -90,6 +150,12 @@ func WavePatternHandler(w http.ResponseWriter, r *http.Request) {
 			segmentSVGs = append(segmentSVGs, segSVG)
 			segments[i].SVG = segSVG
 		}
+
+		// Add coords (pattern as [][x, y])
+		coords = make([][]float64, len(pattern))
+		for i, y := range pattern {
+			coords[i] = []float64{float64(i), y}
+		}
 	}()
 
 	if err != nil {
@@ -108,4 +174,11 @@ func WavePatternHandler(w http.ResponseWriter, r *http.Request) {
 		},
 		SegmentSVGs: segmentSVGs,
 	})
+}
+
+func getenv(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
 }

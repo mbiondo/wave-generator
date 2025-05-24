@@ -17,11 +17,15 @@ func setupHandlers(mux *http.ServeMux) error {
 	fs := http.FileServer(http.Dir("static"))
 	mux.Handle("/static/", http.StripPrefix("/static/", fs))
 
+	// Serve docs as static markdown rendered HTML
+	mux.HandleFunc("/docs/api-docs", logHandler(handlers.APIDocsHandler))
+
 	// Blog post handler
 	mux.HandleFunc("/blog/wave-generator-math-tutorial", logHandler(handlers.BlogPostHandler))
 
 	// API endpoints
 	mux.HandleFunc("/generate-wave", logHandler(handlers.WavePatternHandler))
+	mux.HandleFunc("/generate-apikey", logHandler(handlers.GenerateAPIKeyHandler))
 
 	// Root handler must be last
 	mux.HandleFunc("/", logHandler(handlers.IndexHandler))

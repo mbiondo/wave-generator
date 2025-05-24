@@ -5,9 +5,31 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/yuin/goldmark"
 )
+
+func renderPageTemplate(title string, content []byte) ([]byte, error) {
+	templatePath := filepath.Join("static", "page_template.html")
+	tpl, err := os.ReadFile(templatePath)
+	if err != nil {
+		return nil, err
+	}
+	html := string(tpl)
+	// Si el contenido no tiene <h1>, agrega uno pero con clases y estructura consistente
+	if !strings.Contains(string(content), "<h1") {
+		content = append([]byte(`<h1 class="page-title">`+title+`</h1>`), content...)
+	}
+	// Asegura que el contenido esté dentro de <main> para mantener el padding y ancho
+	if !strings.Contains(html, "<main>") {
+		html = strings.Replace(html, "<!--CONTENT-->", `<main>`+string(content)+`</main>`, 1)
+	} else {
+		html = strings.Replace(html, "<!--CONTENT-->", string(content), 1)
+	}
+	html = strings.Replace(html, "{{TITLE}}", title, 1)
+	return []byte(html), nil
+}
 
 func BlogPostHandler(w http.ResponseWriter, r *http.Request) {
 	mdPath := filepath.Join("blog", "wave-generator-math-tutorial.md")
@@ -16,30 +38,18 @@ func BlogPostHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Blog post not found", http.StatusNotFound)
 		return
 	}
-	var htmlBuf []byte
-	htmlBuf, err = renderMarkdown(mdBytes)
-	if err != nil {
+	var htmlBuf bytes.Buffer
+	if err := goldmark.Convert(mdBytes, &htmlBuf); err != nil {
 		http.Error(w, "Error rendering markdown", http.StatusInternalServerError)
 		return
 	}
+	page, err := renderPageTemplate("Wave Generator Blog", htmlBuf.Bytes())
+	if err != nil {
+		http.Error(w, "Template error", http.StatusInternalServerError)
+		return
+	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write([]byte(`<html><head><title>Wave Generator Blog</title>
-		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
-		<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-		<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-		<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-		<style>
-			body { font-family: Arial, sans-serif; max-width: 800px; margin: 2rem auto; background: #f8fafd; color: #222; }
-			pre, code { background: #f4f4f4; border-radius: 4px; }
-			h1,h2,h3 { color: #3498db; }
-			a { color: #2980b9; }
-			.hljs { background: #f4f4f4; }
-		</style>
-	</head><body>
-	<script>hljs.highlightAll();</script>
-	`))
-	w.Write(htmlBuf)
-	w.Write([]byte(`</body></html>`))
+	w.Write(page)
 }
 
 func renderMarkdown(md []byte) ([]byte, error) {
@@ -48,4 +58,25 @@ func renderMarkdown(md []byte) ([]byte, error) {
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+func APIDocsHandler(w http.ResponseWriter, r *http.Request) {
+	mdPath := filepath.Join("docs", "api-docs.md")
+	mdBytes, err := os.ReadFile(mdPath)
+	if err != nil {
+		http.Error(w, "API docs not found", http.StatusNotFound)
+		return
+	}
+	var htmlBuf bytes.Buffer
+	if err := goldmark.Convert(mdBytes, &htmlBuf); err != nil {
+		http.Error(w, "Error rendering markdown", http.StatusInternalServerError)
+		return
+	}
+	page, err := renderPageTemplate("Wave Generator API Docs", htmlBuf.Bytes())
+	if err != nil {
+		http.Error(w, "Template error", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Write(page)
 }

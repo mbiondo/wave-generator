@@ -1,0 +1,110 @@
+openapi: 3.0.0
+info:
+    title: Wave Generator API
+    description: API for generating wave patterns and polynomial segments from images.
+    version: 1.0.0
+paths:
+    /generate-apikey:
+        post:
+            summary: Generate a new API key
+            description: Returns a new API key for authenticating requests.
+            responses:
+                "200":
+                    description: API key generated
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    api_key:
+                                        type: string
+    /generate-wave:
+        post:
+            summary: Generate wave pattern and polynomial segments from image
+            description: |
+                Accepts an image (PNG or JPEG) in the request body, extracts the wave pattern, fits cubic polynomial segments, and returns SVG and segment data.
+                **Requires**: `X-API-Key` header with a valid API key.
+                **Rate limit**: 10 requests per hour per API key.
+            parameters:
+                - in: header
+                  name: X-API-Key
+                  required: true
+                  schema:
+                      type: string
+                  description: API key obtained from /generate-apikey
+            requestBody:
+                required: true
+                content:
+                    image/png:
+                        schema:
+                            type: string
+                            format: binary
+                    image/jpeg:
+                        schema:
+                            type: string
+                            format: binary
+            responses:
+                "200":
+                    description: Full SVG and polynomial segments
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/ResponsePayload"
+                "400":
+                    description: Error decoding image
+                    content:
+                        text/plain:
+                            schema:
+                                type: string
+                "401":
+                    description: Missing or invalid API key
+                    content:
+                        text/plain:
+                            schema:
+                                type: string
+                "429":
+                    description: Rate limit exceeded
+                    content:
+                        text/plain:
+                            schema:
+                                type: string
+                "422":
+                    description: Processing error
+                    content:
+                        text/plain:
+                            schema:
+                                type: string
+components:
+    schemas:
+        PolySegment:
+            type: object
+            properties:
+                domain_start:
+                    type: integer
+                domain_end:
+                    type: integer
+                a3:
+                    type: number
+                    format: double
+                a2:
+                    type: number
+                    format: double
+                a1:
+                    type: number
+                    format: double
+                a0:
+                    type: number
+                    format: double
+                expression:
+                    type: string
+                svg:
+                    type: string
+        ResponsePayload:
+            type: object
+            properties:
+                segments:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/PolySegment"
+                svg:
+                    type: string

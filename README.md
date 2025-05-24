@@ -2,11 +2,27 @@
 
 **Wave Generator** is a Go-based application that processes images to extract wave patterns (originally designed for skylines, but applicable to any wave-like pattern in images). It performs mathematical analysis to represent these patterns as piecewise cubic polynomials and generates both SVG visualizations and mathematical equations.
 
+[![Go CI](https://github.com/mbiondo/wave-generator/actions/workflows/ci.yml/badge.svg)](https://github.com/mbiondo/wave-generator/actions)
+
+---
+
+## Repository
+
+GitHub: [https://github.com/mbiondo/wave-generator](https://github.com/mbiondo/wave-generator)
+
+---
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
 ---
 
 ## Table of Contents
 
 - [Wave Generator](#wave-generator)
+  - [Repository](#repository)
+  - [License](#license)
   - [Table of Contents](#table-of-contents)
   - [Overview](#overview)
   - [Mathematical Foundations](#mathematical-foundations)
@@ -19,9 +35,14 @@
   - [Usage](#usage)
     - [HTTP API](#http-api)
     - [Docker](#docker)
+  - [API Authentication \& Rate Limiting](#api-authentication--rate-limiting)
+    - [How to get an API key](#how-to-get-an-api-key)
+    - [How to use your API key](#how-to-use-your-api-key)
+  - [OpenAPI Documentation](#openapi-documentation)
   - [Project Structure](#project-structure)
+  - [Blog \& Documentation](#blog--documentation)
   - [References](#references)
-  - [License](#license)
+  - [What could be improved?](#what-could-be-improved)
 
 ---
 
@@ -172,19 +193,68 @@ make docker-build
 make docker-run
 ```
 
+## API Authentication & Rate Limiting
+
+This API uses **API keys** for authentication and rate limiting.
+
+### How to get an API key
+
+Send a POST request to `/generate-apikey`:
+
+```bash
+curl -X POST http://localhost:1155/generate-apikey
+```
+
+Response:
+```json
+{
+  "api_key": "api_1712345678901234567"
+}
+```
+
+### How to use your API key
+
+Include your API key in the `X-API-Key` header for all requests to `/generate-wave`:
+
+```bash
+curl -X POST http://localhost:1155/generate-wave \
+     -H "X-API-Key: api_1712345678901234567" \
+     -H "Content-Type: image/jpeg" \
+     --data-binary "@./image.jpg"
+```
+
+- **Rate limit:** 10 requests per hour per API key.
+- If you exceed the limit, you'll receive HTTP 429 with a message indicating when you can try again.
+
+---
+
+## OpenAPI Documentation
+
+See [`docs/openapi.yaml`](docs/openapi.yaml) for the full API specification, including authentication and rate limiting.
+
 ## Project Structure
 
 ```
 wave-generator/
-├── cmd/            # Command-line tools
-├── handlers/       # HTTP request handlers
-├── models/        # Data structures
-├── services/      # Core business logic
-│   ├── extraction/   # Wave pattern extraction
-│   ├── fitting/     # Polynomial fitting
-│   └── svg/         # SVG generation
-└── tests/        # Integration tests
+├── handlers/       # HTTP request handlers (API, blog, index)
+├── models/         # Data structures (PolySegment, ResponsePayload)
+├── services/       # Core business logic (image processing, extraction, fitting, SVG)
+├── static/         # Static frontend files (HTML, CSS, JS)
+├── blog/           # Blog/tutorial markdown
+├── .github/        # CI/CD workflows
+├── Dockerfile      # Docker build file
+├── Makefile        # Build and test automation
+├── main.go         # Main server entrypoint
+├── go.mod          # Go module definition
+└── ...             # Other supporting files
 ```
+
+## Blog & Documentation
+
+- [Math & Programming Tutorial](https://github.com/mbiondo/wave-generator/blob/main/blog/wave-generator-math-tutorial.md)
+- [Live Rendered Tutorial](/blog/wave-generator-math-tutorial) (served by the app)
+
+---
 
 ## References
 
@@ -192,6 +262,15 @@ wave-generator/
 2. Digital Image Processing (Gonzalez & Woods) - Chapter 10: Image Segmentation
 3. Computer Graphics Principles and Practice - Chapter 21: Curves and Surfaces
 
-## License
+---
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## What could be improved?
+
+- **Unit and integration tests:** Add more coverage for edge cases and error handling.
+- **Continuous deployment:** Add Docker image publishing and deploy steps to CI/CD.
+- **Frontend:** Add more interactive controls and better error feedback.
+- **Performance:** Optimize polynomial fitting for large images.
+- **Documentation:** Expand API docs and add usage examples.
+- **Multi-language support:** Add i18n for broader accessibility.
+- **Security:** Validate and sanitize all inputs.
+- **Visualization:** Add more export formats (PNG, PDF) and interactive SVG features.
