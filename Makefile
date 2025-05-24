@@ -11,7 +11,7 @@ DOCKER_IMAGE := $(APP_NAME):latest
 COVERAGE_FILE := coverage.out
 
 # Targets
-.PHONY: all build run clean test coverage coverage-html docker-build docker-run help
+.PHONY: all build run clean test coverage coverage-html docker-build docker-run help lint
 
 help: ## Show this help message
 	@echo '${CYAN}Usage:${RESET}'
@@ -55,3 +55,7 @@ docker-build: ## Build Docker image
 docker-run: ## Run Docker container
 	@echo "${GREEN}Running Docker container...${RESET}"
 	@docker run -p 1155:1155 $(DOCKER_IMAGE)
+
+lint: ## Run golangci-lint
+	@echo "${GREEN}Running golangci-lint...${RESET}"
+	@golangci-lint run
