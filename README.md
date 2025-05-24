@@ -1,276 +1,114 @@
-# Wave Generator
+# 🌊 Wave Generator
 
-**Wave Generator** is a Go-based application that processes images to extract wave patterns (originally designed for skylines, but applicable to any wave-like pattern in images). It performs mathematical analysis to represent these patterns as piecewise cubic polynomials and generates both SVG visualizations and mathematical equations.
+**Wave Generator** is a Go application that transforms images into smooth mathematical representations using piecewise cubic polynomials and renders them as scalable SVGs. Ideal for exploring the mathematical essence of skylines, waveforms, or any visually wave-like pattern.
 
 [![Go CI](https://github.com/mbiondo/wave-generator/actions/workflows/ci.yml/badge.svg)](https://github.com/mbiondo/wave-generator/actions)
 
 ---
 
-## Repository
+## 🎯 What does this project do?
 
-GitHub: [https://github.com/mbiondo/wave-generator](https://github.com/mbiondo/wave-generator)
+Starting from an image input (like a skyline), it performs:
 
----
+1. 🖤 Grayscale conversion
+2. 🧠 Edge detection via vertical gradient analysis
+3. 🧮 Curve fitting with least squares and cubic polynomials
+4. 🖼️ SVG rendering and math output
 
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## Table of Contents
-
-- [Wave Generator](#wave-generator)
-  - [Repository](#repository)
-  - [License](#license)
-  - [Table of Contents](#table-of-contents)
-  - [Overview](#overview)
-  - [Mathematical Foundations](#mathematical-foundations)
-    - [Wave Pattern Extraction](#wave-pattern-extraction)
-    - [Cubic Polynomial Fitting](#cubic-polynomial-fitting)
-      - [Least Squares Optimization](#least-squares-optimization)
-      - [Continuity Constraints](#continuity-constraints)
-    - [SVG Generation](#svg-generation)
-  - [Installation](#installation)
-  - [Usage](#usage)
-    - [HTTP API](#http-api)
-    - [Docker](#docker)
-  - [API Authentication \& Rate Limiting](#api-authentication--rate-limiting)
-    - [How to get an API key](#how-to-get-an-api-key)
-    - [How to use your API key](#how-to-use-your-api-key)
-  - [OpenAPI Documentation](#openapi-documentation)
-  - [Project Structure](#project-structure)
-  - [Blog \& Documentation](#blog--documentation)
-  - [References](#references)
-  - [What could be improved?](#what-could-be-improved)
+You can use it via [API](#api) or [Playground (coming soon)](#).
 
 ---
 
-## Overview
+## 🧪 Example
 
-The **Wave Generator** application performs these key steps:
+Imagine uploading this image:
 
-1. **Image Processing**: 
-   - Converts input image to grayscale using luminance formula
-   - Normalizes pixel values to [0,1] range
-   
-2. **Wave Pattern Extraction**: 
-   - Detects patterns using vertical gradient analysis
-   - Implements noise reduction and peak detection
-   
-3. **Polynomial Fitting**: 
-   - Segments the pattern into optimal pieces
-   - Fits cubic polynomials using least squares optimization
-   
-4. **SVG Generation**: 
-   - Creates scalable vector graphics representation
-   - Provides smooth curve visualization
-   
-5. **JSON Response**: 
-   - Returns mathematical equations and SVG data
-   - Includes segment metadata and error metrics
+![placeholder](./static/example-original.jpg)
+
+And getting this as the resulting wave pattern:
+
+![placeholder](./static/example-wave.svg)
 
 ---
 
-## Mathematical Foundations
-
-### Wave Pattern Extraction
-
-The pattern is extracted using an enhanced gradient detection algorithm. For each column x, we compute the normalized gradient G(x,y):
-
-$$
-G(x,y) = \frac{|I(x,y+1) - I(x,y)|}{\max_{y} |I(x,y+1) - I(x,y)|}
-$$
-
-Where:
-- \( I(x,y) \in [0,1] \) is the normalized intensity at position (x,y)
-- \( G(x,y) \in [0,1] \) is the normalized gradient magnitude
-
-Peak detection uses a local maximum finder with configurable window size w:
-
-$$
-P(x) = \arg\max_{y \in [y-w,y+w]} G(x,y)
-$$
-
-### Cubic Polynomial Fitting
-
-The pattern is segmented into n optimal pieces, where each segment is modeled by a cubic polynomial:
-
-$$
-f_i(x) = a_{3i}x^3 + a_{2i}x^2 + a_{1i}x + a_{0i}, \quad x \in [x_i, x_{i+1}]
-$$
-
-#### Least Squares Optimization
-
-The coefficients vector \(\mathbf{a}_i = [a_{3i}, a_{2i}, a_{1i}, a_{0i}]^T\) is obtained by solving:
-
-$$
-\min_{\mathbf{a}_i} \|\mathbf{X}_i\mathbf{a}_i - \mathbf{y}_i\|_2^2
-$$
-
-Where the design matrix \(\mathbf{X}_i\) for segment i is:
-
-$$
-\mathbf{X}_i = 
-\begin{bmatrix}
-x_i^3 & x_i^2 & x_i & 1 \\
-(x_i+1)^3 & (x_i+1)^2 & (x_i+1) & 1 \\
-\vdots & \vdots & \vdots & \vdots \\
-x_{i+1}^3 & x_{i+1}^2 & x_{i+1} & 1
-\end{bmatrix}
-$$
-
-The solution is computed using numerically stable QR decomposition:
-
-$$
-\mathbf{X}_i = \mathbf{Q}_i\mathbf{R}_i \implies \mathbf{a}_i = \mathbf{R}_i^{-1}\mathbf{Q}_i^T\mathbf{y}_i
-$$
-
-#### Continuity Constraints
-
-To ensure smooth transitions between segments, we enforce C¹ continuity:
-
-$$
-\begin{aligned}
-f_i(x_{i+1}) &= f_{i+1}(x_{i+1}) \\
-f'_i(x_{i+1}) &= f'_{i+1}(x_{i+1})
-\end{aligned}
-$$
-
-### SVG Generation
-
-The SVG path is generated by sampling each polynomial at a resolution Δx:
-
-$$
-(x_k, y_k) = (x_i + k\Delta x, f_i(x_i + k\Delta x))
-$$
-
-The resulting polyline is rendered as:
-
-```xml
-<svg viewBox="0 0 W H" xmlns="http://www.w3.org/2000/svg">
-  <polyline 
-    fill="none" 
-    stroke="lime" 
-    stroke-width="2" 
-    points="x₁,y₁ x₂,y₂ ... xₙ,yₙ"
-  />
-</svg>
-```
-
----
-
-## Installation
+## 🚀 Quick Install
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/wave-generator.git
+# Clone the repo
+git clone https://github.com/mbiondo/wave-generator.git
+cd wave-generator
 
-# Install dependencies
-go mod download
-
-# Build the project
+# Build
 make build
+
+# Or run with Docker
+docker compose up --build
 ```
 
-## Usage
+---
 
-### HTTP API
+## 🔌 Friendly API
 
-Send a POST request to `/wave` with an image file:
-
-```bash
- curl -X POST http://localhost:1155/generate-wave \
-     -H "Content-Type: image/jpeg" \
-     --data-binary "@./image.jpg"
-```
-
-### Docker
-
-```bash
-# Build and run with Docker
-make docker-build
-make docker-run
-```
-
-## API Authentication & Rate Limiting
-
-This API uses **API keys** for authentication and rate limiting.
-
-### How to get an API key
-
-Send a POST request to `/generate-apikey`:
+### Get an API Key
 
 ```bash
 curl -X POST http://localhost:1155/generate-apikey
 ```
 
-Response:
-```json
-{
-  "api_key": "api_1712345678901234567"
-}
-```
-
-### How to use your API key
-
-Include your API key in the `X-API-Key` header for all requests to `/generate-wave`:
+### Generate wave from image
 
 ```bash
 curl -X POST http://localhost:1155/generate-wave \
-     -H "X-API-Key: api_1712345678901234567" \
+     -H "X-API-Key: your_api_key" \
      -H "Content-Type: image/jpeg" \
-     --data-binary "@./image.jpg"
+     --data-binary "@./your-image.jpg"
 ```
 
-- **Rate limit:** 10 requests per hour per API key.
-- If you exceed the limit, you'll receive HTTP 429 with a message indicating when you can try again.
+📎 [View full API documentation →](./docs/api-docs.md)
 
 ---
 
-## OpenAPI Documentation
+## 📚 Key Resources
 
-See [`docs/openapi.yaml`](docs/openapi.yaml) for the full API specification, including authentication and rate limiting.
+* 📘 [Math & Code Tutorial](./blog/wave-generator-math-tutorial.md)
+* 📡 [API Documentation](./docs/api-docs.md)
+* 🧾 [OpenAPI Spec](./docs/openapi.yaml)
 
-## Project Structure
+---
+
+## 📁 Project Structure
 
 ```
 wave-generator/
-├── handlers/       # HTTP request handlers (API, blog, index)
-├── models/         # Data structures (PolySegment, ResponsePayload)
-├── services/       # Core business logic (image processing, extraction, fitting, SVG)
-├── static/         # Static frontend files (HTML, CSS, JS)
-├── blog/           # Blog/tutorial markdown
-├── .github/        # CI/CD workflows
-├── Dockerfile      # Docker build file
-├── Makefile        # Build and test automation
-├── main.go         # Main server entrypoint
-├── go.mod          # Go module definition
-└── ...             # Other supporting files
+├── handlers/       # HTTP endpoints
+├── models/         # Data models
+├── services/       # Core logic: image → wave → SVG
+├── blog/           # Markdown tutorials
+├── static/         # Static assets (images, SVGs)
+├── docs/           # API & OpenAPI docs
+├── Dockerfile      # Ready-to-run container
+└── main.go         # Entry point
 ```
 
-## Blog & Documentation
+---
 
-- [Math & Programming Tutorial](https://github.com/mbiondo/wave-generator/blob/main/blog/wave-generator-math-tutorial.md)
-- [Live Rendered Tutorial](/blog/wave-generator-math-tutorial) (served by the app)
+## 🧠 Motivation
+
+This project began with a question: can we see an image as an equation? By applying math tools to visual inputs, we uncover beauty, structure, and creative possibilities.
 
 ---
 
-## References
+## 🤝 Contributions
 
-1. Numerical Analysis (Burden & Faires) - Chapter 8: Approximation Theory
-2. Digital Image Processing (Gonzalez & Woods) - Chapter 10: Image Segmentation
-3. Computer Graphics Principles and Practice - Chapter 21: Curves and Surfaces
+Pull requests welcome! Areas you can help with:
+
+* New fitting techniques
+* Improved edge detection strategies
+* Optimizing for high-res images
+* More output formats (PNG, PDF)
 
 ---
 
-## What could be improved?
+## 📄 License
 
-- **Unit and integration tests:** Add more coverage for edge cases and error handling.
-- **Continuous deployment:** Add Docker image publishing and deploy steps to CI/CD.
-- **Frontend:** Add more interactive controls and better error feedback.
-- **Performance:** Optimize polynomial fitting for large images.
-- **Documentation:** Expand API docs and add usage examples.
-- **Multi-language support:** Add i18n for broader accessibility.
-- **Security:** Validate and sanitize all inputs.
-- **Visualization:** Add more export formats (PNG, PDF) and interactive SVG features.
+MIT © Maximiliano Biondo

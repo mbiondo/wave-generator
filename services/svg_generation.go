@@ -54,8 +54,10 @@ func BuildSVGSegment(seg models.PolySegment, width, height int, minY, maxY float
 	for i := 0; i < width; i++ {
 		x := seg.X0 + i
 		y := seg.CoefA3*float64(x)*float64(x)*float64(x) + seg.CoefA2*float64(x)*float64(x) + seg.CoefA1*float64(x) + seg.CoefA0
-		px := i
+		// Rotar en X e Y: invertir X y Y respecto al centro
+		px := width - 1 - i
 		py := float64(height-2) - ((y-minY)/yRange)*float64(height-4)
+		py = float64(height-2) - py // invertir Y
 		points += fmt.Sprintf("%d,%.1f ", px, py)
 	}
 	return fmt.Sprintf(`<svg width="%d" height="%d" viewBox="0 0 %d %d" style="background:#f8fafd;border-radius:4px;border:1px solid #e1e4e8;"><polyline fill="none" stroke="#3498db" stroke-width="2" points="%s"/></svg>`, width, height, width, height, points)
