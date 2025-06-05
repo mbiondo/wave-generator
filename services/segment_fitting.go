@@ -66,7 +66,7 @@ func FitSegments(pattern []float64, width int) []models.PolySegment {
 
 	segments := make([]models.PolySegment, 0, nSeg)
 
-	for i := 0; i < nSeg; i++ {
+	for i := range nSeg {
 		x0 := i * segW
 		x1 := (i + 1) * segW
 		if x0 >= width {

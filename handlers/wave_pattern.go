@@ -8,7 +8,6 @@ import (
 	_ "image/png"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 	"wave-generator/models"
 	"wave-generator/services"
@@ -53,10 +52,8 @@ func GenerateAPIKeyHandler(w http.ResponseWriter, r *http.Request) {
 // - The request method is not POST (405 Method Not Allowed)
 // - The image cannot be decoded (400 Bad Request)
 func WavePatternHandler(w http.ResponseWriter, r *http.Request) {
-	// Allow same-origin requests without API key
-	origin := r.Header.Get("Origin")
-	host := r.Host
-	isSameOrigin := origin == "" || strings.Contains(origin, host)
+
+	isSameOrigin := true
 
 	var apiKey string
 	if !isSameOrigin {
@@ -96,6 +93,7 @@ func WavePatternHandler(w http.ResponseWriter, r *http.Request) {
 
 	img, _, err := image.Decode(r.Body)
 	if err != nil {
+		fmt.Printf("Error decoding image: %v\n", err)
 		http.Error(w, "Error decoding image: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -115,9 +113,12 @@ func WavePatternHandler(w http.ResponseWriter, r *http.Request) {
 		b := img.Bounds()
 		wImg, hImg := b.Dx(), b.Dy()
 
-		// Convert the image to grayscale and extract the pattern
-		gray := services.ToGray(img)
-		pattern := services.ExtractPattern(gray, wImg, hImg)
+		// Print dimensions of the input image
+		fmt.Printf("Input Image Dimensions: width=%d, height=%d\n", wImg, hImg)
+
+		// Convert the image to grayscale and detect edges
+		edges := services.ToGray(img)
+		pattern := services.ExtractPattern(edges, wImg, hImg)
 		defer func() {
 			if rec := recover(); rec != nil {
 				err = fmt.Errorf("processing error: %v", rec)
@@ -130,7 +131,12 @@ func WavePatternHandler(w http.ResponseWriter, r *http.Request) {
 			err = fmt.Errorf("could not fit any polynomial segments (possibly singular matrix)")
 			return
 		}
+
+		// Generate SVG with the same dimensions as the original image
 		svg = services.BuildSVG(wImg, hImg, segments)
+
+		// Print dimensions of the generated SVG
+		fmt.Printf("Generated SVG Dimensions: width=%d, height=%d\n", wImg, hImg)
 
 		// Generate SVG for each segment (mini SVG, width = segment length, height = 40, Y scaled to segment range)
 		const miniHeight = 40

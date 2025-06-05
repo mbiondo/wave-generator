@@ -23,19 +23,30 @@ import (
 func ExtractPattern(gray *image.Gray, w, h int) []float64 {
 	pattern := make([]float64, w)
 
-	for x := 0; x < w; x++ {
+	for x := range w {
 		maxGradient := 0.0
 		maxY := 0
+		sumGradient := 0.0
+		count := 0
 
 		for y := 1; y < h; y++ {
 			gradient := math.Abs(float64(gray.GrayAt(x, y).Y) - float64(gray.GrayAt(x, y-1).Y))
+			sumGradient += gradient
+			count++
+
 			if gradient > maxGradient {
 				maxGradient = gradient
 				maxY = y
 			}
 		}
 
-		pattern[x] = float64(maxY)
+		// Use a weighted average to smooth the pattern extraction
+		averageGradient := sumGradient / float64(count)
+		if maxGradient > averageGradient*1.5 { // Threshold to avoid noise
+			pattern[x] = float64(maxY)
+		} else {
+			pattern[x] = float64(h) / 2 // Default to middle of the image if no strong gradient
+		}
 	}
 
 	return pattern
